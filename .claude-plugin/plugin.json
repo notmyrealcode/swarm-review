@@ -1,0 +1,9 @@
+{
+  "name": "swarm-review",
+  "description": "Multi-agent code review — dispatches a swarm of agents to review, fix, and re-review your code using Codex or Gemini CLI",
+  "version": "1.0.0",
+  "author": {
+    "name": "Justin"
+  },
+  "license": "MIT"
+}

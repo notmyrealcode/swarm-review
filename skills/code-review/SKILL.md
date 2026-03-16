@@ -328,7 +328,9 @@ Replace `{PLAN_CONTENT}` (read the plan file and inline its full contents) and `
 
 The Code Review Prompt template (below) is therefore **not used** when Codex is invoked with these flags — Codex generates its own review. Only use the template with bare `codex exec review "<prompt>"` (no diff-scoping flags).
 
-> **macOS sandbox crash**: `codex review` uses Seatbelt sandboxing which crashes on some macOS versions. Always use `codex exec review --full-auto` instead. If that still crashes with a sandbox error, retry the same command replacing `--full-auto` with `--dangerously-bypass-approvals-and-sandbox`. This is safe for reviews (read-only operation).
+> **macOS sandbox crash — `dangerouslyDisableSandbox` required**: On macOS, Codex panics at startup because its `system-configuration` Rust crate calls `SCDynamicStoreCreate` to read network/proxy settings, and Claude Code's sandbox blocks that macOS system service. The crash happens **before** Codex processes any of its own flags (including `--dangerously-bypass-approvals-and-sandbox`), so Codex CLI flags cannot fix this.
+>
+> **Fix**: All Bash tool calls that invoke Codex on macOS **must** set `dangerouslyDisableSandbox: true` on the Bash tool itself. This disables Claude Code's sandbox for that command, allowing Codex to access macOS system services during startup. This is safe — Codex reviews are read-only.
 
 ```bash
 # Uncommitted changes (Codex auto-generates review):
@@ -344,11 +346,14 @@ codex exec review --full-auto --commit <sha>
 codex exec review --full-auto "<prompt>"
 ```
 
-**Sandbox crash fallback**: If any of the above commands fail with a sandbox/Seatbelt error, retry the exact same command replacing `--full-auto` with `--dangerously-bypass-approvals-and-sandbox`:
+**IMPORTANT**: When calling the Bash tool for any of the above commands, **always** set `dangerouslyDisableSandbox: true`. Example:
 
-```bash
-# Example fallback for uncommitted changes:
-codex exec review --dangerously-bypass-approvals-and-sandbox --uncommitted
+```
+Bash(
+  command = "codex exec review --full-auto --uncommitted",
+  run_in_background = true,
+  dangerouslyDisableSandbox = true
+)
 ```
 
 ### Codex — Plan Review
@@ -358,11 +363,7 @@ codex exec review --dangerously-bypass-approvals-and-sandbox --uncommitted
 echo "<prompt with {PLAN_CONTENT} inlined>" | codex exec --cd <project_root> --full-auto --skip-git-repo-check -
 ```
 
-If the above crashes with a sandbox error, retry with:
-
-```bash
-echo "<prompt with {PLAN_CONTENT} inlined>" | codex exec --cd <project_root> --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check -
-```
+As above, use `dangerouslyDisableSandbox: true` on the Bash tool call.
 
 ### Gemini — Code Review
 

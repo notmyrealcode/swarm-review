@@ -326,27 +326,42 @@ Replace `{PLAN_CONTENT}` (read the plan file and inline its full contents) and `
 
 **IMPORTANT — CLI syntax**: The `--base`, `--uncommitted`, and `--commit` flags are **mutually exclusive with the positional `[PROMPT]` argument**. When using these flags, do NOT pass a custom prompt — Codex generates its own review prompt from the diff.
 
-The Code Review Prompt template (below) is therefore **not used** when Codex is invoked with these flags — Codex generates its own review. Only use the template with bare `codex review "<prompt>"` (no diff-scoping flags).
+The Code Review Prompt template (below) is therefore **not used** when Codex is invoked with these flags — Codex generates its own review. Only use the template with bare `codex exec review "<prompt>"` (no diff-scoping flags).
+
+> **macOS sandbox crash**: `codex review` uses Seatbelt sandboxing which crashes on some macOS versions. Always use `codex exec review --full-auto` instead. If that still crashes with a sandbox error, retry the same command replacing `--full-auto` with `--dangerously-bypass-approvals-and-sandbox`. This is safe for reviews (read-only operation).
 
 ```bash
 # Uncommitted changes (Codex auto-generates review):
-codex review --uncommitted
+codex exec review --full-auto --uncommitted
 
 # Branch diff against base:
-codex review --base <detected_base>
+codex exec review --full-auto --base <detected_base>
 
 # Specific commit:
-codex review --commit <sha>
+codex exec review --full-auto --commit <sha>
 
 # No flags, custom prompt as positional arg:
-codex review "<prompt>"
+codex exec review --full-auto "<prompt>"
+```
+
+**Sandbox crash fallback**: If any of the above commands fail with a sandbox/Seatbelt error, retry the exact same command replacing `--full-auto` with `--dangerously-bypass-approvals-and-sandbox`:
+
+```bash
+# Example fallback for uncommitted changes:
+codex exec review --dangerously-bypass-approvals-and-sandbox --uncommitted
 ```
 
 ### Codex — Plan Review
 
 ```bash
 # Plan content is inlined into the prompt (read by Claude before invoking Codex):
-echo "<prompt with {PLAN_CONTENT} inlined>" | codex exec --cd <project_root> --sandbox read-only --skip-git-repo-check -
+echo "<prompt with {PLAN_CONTENT} inlined>" | codex exec --cd <project_root> --full-auto --skip-git-repo-check -
+```
+
+If the above crashes with a sandbox error, retry with:
+
+```bash
+echo "<prompt with {PLAN_CONTENT} inlined>" | codex exec --cd <project_root> --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check -
 ```
 
 ### Gemini — Code Review
